@@ -48,6 +48,12 @@
     <Reference Include="BundleTransformer.UglifyJs">
       <HintPath>..\#packages\BundleTransformer.UglifyJs.1.8.29\lib\net40\BundleTransformer.UglifyJs.dll</HintPath>
     </Reference>
+    <Reference Include="BundleTransformer.Yui">
+      <HintPath>..\#packages\BundleTransformer.Yui.1.8.29\lib\net40\BundleTransformer.Yui.dll</HintPath>
+    </Reference>
+    <Reference Include="EcmaScript.NET">
+      <HintPath>..\#packages\EcmaScript.Net.1.0.1.0\lib\net20\EcmaScript.NET.dll</HintPath>
+    </Reference>
     <Reference Include="FluentConsole">
       <HintPath>..\#packages\FluentConsole.0.8.3.0\lib\net35-Client\FluentConsole.dll</HintPath>
     </Reference>
@@ -87,6 +93,9 @@
     <Reference Include="System.Xml" />
     <Reference Include="WebGrease">
       <HintPath>..\#packages\WebGrease.1.5.2\lib\WebGrease.dll</HintPath>
+    </Reference>
+    <Reference Include="Yahoo.Yui.Compressor">
+      <HintPath>..\#packages\YUICompressor.NET.2.4.0.0\lib\NET20\Yahoo.Yui.Compressor.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

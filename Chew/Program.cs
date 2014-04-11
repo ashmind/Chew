@@ -8,7 +8,7 @@ using HtmlAgilityPack;
 
 namespace Chew {
     public static class Program {
-        public static void Main(string[] args) {
+        public static int Main(string[] args) {
             try {
                 MainWithoutErrorHandling(args);
                 if (Debugger.IsAttached)
@@ -16,10 +16,16 @@ namespace Chew {
             }
             catch (Exception ex) {
                 FluentConsole.Red.Line(ex);
+                return 1;
             }
+
+            return 0;
         }
 
         private static void MainWithoutErrorHandling(string[] args) {
+            if (args.Contains("-debug"))
+                Debugger.Launch();
+
             var console = FluentConsole.Instance;
 
             var workingDirectory = Path.GetFullPath(args[0]);
