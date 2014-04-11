@@ -15,18 +15,19 @@ namespace Chew {
         }
 
         public void WriteResults([NotNull] ICollection<FileDependency> results) {
-            var grouped = Argument.NotNull("results", results).GroupBy(r => r.Content);
-            var jsPath = Path.Combine(rootPath, "js");
+            var groupedByType = Argument.NotNull("results", results).GroupBy(r => new { r.Extension, r.Content }).GroupBy(x => x.Key.Extension);
+            foreach (var groupByType in groupedByType) {
+                var targetPath = Path.Combine(rootPath, groupByType.Key);
+                if (!Directory.Exists(targetPath))
+                    Directory.CreateDirectory(targetPath);
 
-            if (!Directory.Exists(jsPath))
-                Directory.CreateDirectory(jsPath);
+                foreach (var group in groupByType) {
+                    var path = Path.Combine(targetPath, nameGenerator.GenerateName(group.Key.Content) + "." + group.Key.Extension);
+                    File.WriteAllText(path, group.Key.Content);
 
-            foreach (var group in grouped) {
-                var path = Path.Combine(jsPath, nameGenerator.GenerateName(group.Key) + ".js");
-                File.WriteAllText(path, group.Key);
-
-                foreach (var entry in group) {
-                    entry.ProvidePath(path);
+                    foreach (var entry in group) {
+                        entry.ProvidePath(path);
+                    }
                 }
             }
         }

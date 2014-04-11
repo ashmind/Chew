@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Chew.Processors;
 using HtmlAgilityPack;
 
 namespace Chew {
@@ -17,7 +18,10 @@ namespace Chew {
 
         private static void MainWithoutErrorHandling(string[] args) {
             var workingDirectory = args[0];
-            var processor = new HtmlScriptProcessor();
+            var processors = new[] {
+                new ReferenceProcessor(new JavaScriptReferenceHandler()),
+                new ReferenceProcessor(new CssReferenceHandler())
+            };
             var writer = new FileDependencyWriter(workingDirectory, new MD5FileNameGenerator());
 
             var filePaths = Directory.EnumerateFiles(workingDirectory, "*.html", SearchOption.AllDirectories);
@@ -29,7 +33,7 @@ namespace Chew {
                 var document = new HtmlDocument();
                 document.Load(filePath);
 
-                var results = processor.ProcessDocument(document, filePath);
+                var results = processors.SelectMany(p => p.ProcessDocument(document, filePath));
                 allResults.AddRange(results);
                 allDocuments.Add(Tuple.Create(document, filePath));
             }

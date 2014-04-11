@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Web.Optimization;
-using BundleTransformer.Core.Transformers;
 using Chew.VirtualPathSupport;
 using HtmlAgilityPack;
 using JetBrains.Annotations;
 
-namespace Chew {
-    public class HtmlScriptProcessor {
+namespace Chew.Processors {
+    public class ReferenceProcessor {
         #region BundledSequence class
 
         private class BundledSequence {
@@ -24,22 +23,28 @@ namespace Chew {
 
         #endregion
 
-        public HtmlScriptProcessor() {
+        private readonly IReferenceHandler handler;
+
+        static ReferenceProcessor() {
             BundleTable.VirtualPathProvider = new PhysicalPathProvider();
+        }
+
+        public ReferenceProcessor([NotNull] IReferenceHandler handler) {
+            this.handler = Argument.NotNull("handler", handler);
         }
 
         public IEnumerable<FileDependency> ProcessDocument(HtmlDocument document, string documentPath) {
             Argument.NotNull("document", document);
             Argument.NotNullOrEmpty("documentPath", documentPath);
 
-            var scripts = document.DocumentNode.Descendants("script");
-            
+            var references = this.handler.SelectReferences(document);
             var bundles = new List<BundledSequence>();
             var sequence = new List<HtmlNode>();
 
-            foreach (var script in scripts) {
-                if (ShouldProcess(script)) {
-                    sequence.Add(script);
+            foreach (var reference in references) {
+                var shouldProcess = IsLocalPath(this.handler.GetPath(reference));
+                if (shouldProcess) {
+                    sequence.Add(reference);
                 }
                 else if (sequence.Count > 0) {
                     bundles.Add(BundleSequence(sequence, documentPath));
@@ -54,13 +59,24 @@ namespace Chew {
             foreach (var bundle in bundles) {
                 var bundleNode = ReplaceNodesInDocumentWithBundleNode(bundle);
                 var result = new FileDependency(
+                    this.handler.FileExtension,
                     bundle.Content,
-                    path => bundleNode.SetAttributeValue("src", GetRelativePath(documentPath, path))
+                    path => this.handler.SetPath(bundleNode, GetRelativePath(documentPath, path))
                 );
                 results.Add(result);
             }
 
             return results;
+        }
+
+        private bool IsLocalPath(string path) {
+            if (path == null)
+                return false;
+
+            if (path.StartsWith("//") || new Uri(path, UriKind.RelativeOrAbsolute).IsAbsoluteUri)
+                return false;
+
+            return true;
         }
 
         private string GetRelativePath(string documentPath, string path) {
@@ -83,10 +99,10 @@ namespace Chew {
                 ApplicationPath = Path.GetDirectoryName(documentPath)
             };
 
-            var transform = new JsTransformer();
+            var transform = this.handler.Transform;
 
             var bundle = new Bundle("~/stub").Include(
-                sequence.Select(s => "~/" + s.GetAttributeValue("src", null)).ToArray()
+                sequence.Select(r => "~/" + this.handler.GetPath(r)).ToArray()
             );
             bundle.Transforms.Add(transform);
             settings.BundleTable.Add(bundle);
@@ -94,26 +110,6 @@ namespace Chew {
             var response = Optimizer.BuildBundle(bundle.Path, settings);
 
             return new BundledSequence(sequence, response.Content);
-        }
-
-        private bool ShouldProcess(HtmlNode script) {
-            if (!HasCorrectType(script))
-                return false;
-
-            var src = script.GetAttributeValue("src", null);
-            if (src == null)
-                return false;
-
-            if (src.StartsWith("//") || new Uri(src, UriKind.RelativeOrAbsolute).IsAbsoluteUri)
-                return false;
-
-            return true;
-        }
-
-        private static bool HasCorrectType(HtmlNode script) {
-            var type = script.GetAttributeValue("type", null);
-            return type == null 
-                || type.Equals("text/javascript", StringComparison.InvariantCultureIgnoreCase);
         }
     }
 }
