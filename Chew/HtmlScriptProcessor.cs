@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Web.Optimization;
+using BundleTransformer.Core.Transformers;
+using Chew.VirtualPathSupport;
 using HtmlAgilityPack;
 using JetBrains.Annotations;
 
@@ -22,7 +24,11 @@ namespace Chew {
 
         #endregion
 
-        public IEnumerable<FileResult> ProcessDocument(HtmlDocument document, string documentPath) {
+        public HtmlScriptProcessor() {
+            BundleTable.VirtualPathProvider = new PhysicalPathProvider();
+        }
+
+        public IEnumerable<FileDependency> ProcessDocument(HtmlDocument document, string documentPath) {
             Argument.NotNull("document", document);
             Argument.NotNullOrEmpty("documentPath", documentPath);
 
@@ -44,12 +50,12 @@ namespace Chew {
             if (sequence.Count > 0)
                 bundles.Add(BundleSequence(sequence, documentPath));
 
-            var results = new List<FileResult>();
+            var results = new List<FileDependency>();
             foreach (var bundle in bundles) {
                 var bundleNode = ReplaceNodesInDocumentWithBundleNode(bundle);
-                var result = new FileResult(
-                    path => bundleNode.SetAttributeValue("src", GetRelativePath(documentPath, path)),
-                    bundle.Content
+                var result = new FileDependency(
+                    bundle.Content,
+                    path => bundleNode.SetAttributeValue("src", GetRelativePath(documentPath, path))
                 );
                 results.Add(result);
             }
@@ -77,12 +83,15 @@ namespace Chew {
                 ApplicationPath = Path.GetDirectoryName(documentPath)
             };
 
-            var bundle = new Bundle("~/stub")
-                .Include(sequence.Select(s => "~/" + s.GetAttributeValue("src", null)).ToArray());
-            bundle.Transforms.Add(new JsMinify());
+            var transform = new JsTransformer();
+
+            var bundle = new Bundle("~/stub").Include(
+                sequence.Select(s => "~/" + s.GetAttributeValue("src", null)).ToArray()
+            );
+            bundle.Transforms.Add(transform);
             settings.BundleTable.Add(bundle);
-    
-            var response = Optimizer.BuildBundle("~/stub", settings);
+
+            var response = Optimizer.BuildBundle(bundle.Path, settings);
 
             return new BundledSequence(sequence, response.Content);
         }

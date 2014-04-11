@@ -5,16 +5,16 @@ using System.Linq;
 using JetBrains.Annotations;
 
 namespace Chew {
-    public class FileResultWriter {
+    public class FileDependencyWriter {
         [NotNull] private readonly string rootPath;
         [NotNull] private readonly IFileNameGenerator nameGenerator;
 
-        public FileResultWriter([NotNull] string rootPath, [NotNull] IFileNameGenerator nameGenerator) {
+        public FileDependencyWriter([NotNull] string rootPath, [NotNull] IFileNameGenerator nameGenerator) {
             this.rootPath = Argument.NotNullOrEmpty("rootPath", rootPath);
             this.nameGenerator = Argument.NotNull("nameGenerator", nameGenerator);
         }
 
-        public void WriteResults([NotNull] ICollection<FileResult> results) {
+        public void WriteResults([NotNull] ICollection<FileDependency> results) {
             var grouped = Argument.NotNull("results", results).GroupBy(r => r.Content);
             var jsPath = Path.Combine(rootPath, "js");
 

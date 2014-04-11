@@ -18,10 +18,10 @@ namespace Chew {
         private static void MainWithoutErrorHandling(string[] args) {
             var workingDirectory = args[0];
             var processor = new HtmlScriptProcessor();
-            var writer = new FileResultWriter(workingDirectory, new MD5FileNameGenerator());
+            var writer = new FileDependencyWriter(workingDirectory, new MD5FileNameGenerator());
 
             var filePaths = Directory.EnumerateFiles(workingDirectory, "*.html", SearchOption.AllDirectories);
-            var allResults = new List<FileResult>();
+            var allResults = new List<FileDependency>();
             var allDocuments = new List<Tuple<HtmlDocument, string>>();
             foreach (var filePath in filePaths) {
                 FluentConsole.White.Line(filePath);
