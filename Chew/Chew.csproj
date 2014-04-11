@@ -94,8 +94,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="MD5FileNameGenerator.cs" />
-    <Compile Include="FileDependency.cs" />
-    <Compile Include="FileDependencyWriter.cs" />
+    <Compile Include="FileUnitOfWork.cs" />
     <Compile Include="Processors\IReferenceHandler.cs" />
     <Compile Include="Processors\CssReferenceHandler.cs" />
     <Compile Include="Processors\JavaScriptReferenceHandler.cs" />

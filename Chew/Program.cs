@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Chew.Processors;
@@ -10,6 +11,8 @@ namespace Chew {
         public static void Main(string[] args) {
             try {
                 MainWithoutErrorHandling(args);
+                if (Debugger.IsAttached)
+                    Console.ReadKey();
             }
             catch (Exception ex) {
                 FluentConsole.Red.Line(ex);
@@ -17,31 +20,39 @@ namespace Chew {
         }
 
         private static void MainWithoutErrorHandling(string[] args) {
+            var console = FluentConsole.Instance;
+
             var workingDirectory = args[0];
             var processors = new[] {
                 new ReferenceProcessor(new JavaScriptReferenceHandler()),
                 new ReferenceProcessor(new CssReferenceHandler())
             };
-            var writer = new FileDependencyWriter(workingDirectory, new MD5FileNameGenerator());
+            var unitOfWork = new FileUnitOfWork(workingDirectory, new MD5FileNameGenerator());
 
+            console.White.Line("Preparing work:");
             var filePaths = Directory.EnumerateFiles(workingDirectory, "*.html", SearchOption.AllDirectories);
-            var allResults = new List<FileDependency>();
             var allDocuments = new List<Tuple<HtmlDocument, string>>();
             foreach (var filePath in filePaths) {
-                FluentConsole.White.Line(filePath);
+                console.Line(filePath);
 
                 var document = new HtmlDocument();
                 document.Load(filePath);
 
-                var results = processors.SelectMany(p => p.ProcessDocument(document, filePath));
-                allResults.AddRange(results);
+                foreach (var processor in processors) {
+                    processor.ProcessDocument(document, filePath, unitOfWork);
+                }
                 allDocuments.Add(Tuple.Create(document, filePath));
             }
 
-            writer.WriteResults(allResults);
+            console.NewLine().White.Line("Committing work:");
+            unitOfWork.Commit(
+                beforeWrite:  path => console.Green.Line(" + " + path),
+                beforeDelete: path => console.Red.Line(" x " + path)
+            );
 
             foreach (var documentAndPath in allDocuments) {
-                documentAndPath.Item1.Save(documentAndPath.Item2 + ".processed");
+                console.Yellow.Line(" * " + documentAndPath.Item2);
+                documentAndPath.Item1.Save(documentAndPath.Item2);
             }
         }
     }

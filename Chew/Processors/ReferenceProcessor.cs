@@ -33,7 +33,7 @@ namespace Chew.Processors {
             this.handler = Argument.NotNull("handler", handler);
         }
 
-        public IEnumerable<FileDependency> ProcessDocument(HtmlDocument document, string documentPath) {
+        public void ProcessDocument(HtmlDocument document, string documentPath, FileUnitOfWork unitOfWork) {
             Argument.NotNull("document", document);
             Argument.NotNullOrEmpty("documentPath", documentPath);
 
@@ -42,31 +42,28 @@ namespace Chew.Processors {
             var sequence = new List<HtmlNode>();
 
             foreach (var reference in references) {
-                var shouldProcess = IsLocalPath(this.handler.GetPath(reference));
+                var shouldProcess = IsLocalPath(this.handler.GetPath(reference))
+                                 && !reference.Attributes.Contains("data-bundled");
                 if (shouldProcess) {
                     sequence.Add(reference);
                 }
                 else if (sequence.Count > 0) {
-                    bundles.Add(BundleSequence(sequence, documentPath));
+                    bundles.Add(BundleSequence(sequence, documentPath, unitOfWork));
                     sequence = new List<HtmlNode>();
                 }
             }
 
             if (sequence.Count > 0)
-                bundles.Add(BundleSequence(sequence, documentPath));
+                bundles.Add(BundleSequence(sequence, documentPath, unitOfWork));
 
-            var results = new List<FileDependency>();
             foreach (var bundle in bundles) {
                 var bundleNode = ReplaceNodesInDocumentWithBundleNode(bundle);
-                var result = new FileDependency(
+                unitOfWork.RequestFile(
                     this.handler.FileExtension,
                     bundle.Content,
                     path => this.handler.SetPath(bundleNode, GetRelativePath(documentPath, path))
                 );
-                results.Add(result);
             }
-
-            return results;
         }
 
         private bool IsLocalPath(string path) {
@@ -90,24 +87,30 @@ namespace Chew.Processors {
                 }
                 node.Remove();
             }
-            return bundle.Nodes[bundle.Nodes.Count - 1];
+            var bundleNode = bundle.Nodes[bundle.Nodes.Count - 1];
+            bundleNode.SetAttributeValue("data-bundled", "data-bundled");
+            return bundleNode;
         }
 
-        private BundledSequence BundleSequence(IList<HtmlNode> sequence, string documentPath) {
+        private BundledSequence BundleSequence(IList<HtmlNode> sequence, string documentPath, FileUnitOfWork unitOfWork) {
+            var parentPath = Path.GetDirectoryName(documentPath);
             var settings = new OptimizationSettings {
                 BundleTable = new BundleCollection(),
-                ApplicationPath = Path.GetDirectoryName(documentPath)
+                ApplicationPath = parentPath
             };
 
-            var transform = this.handler.Transform;
+            var paths = sequence.Select(r => this.handler.GetPath(r)).ToArray();
+            var bundle = new Bundle("~/stub")
+                .Include(paths.Select(p => "~/" + p).ToArray());
 
-            var bundle = new Bundle("~/stub").Include(
-                sequence.Select(r => "~/" + this.handler.GetPath(r)).ToArray()
-            );
-            bundle.Transforms.Add(transform);
+            bundle.Transforms.Add(this.handler.Transform);
             settings.BundleTable.Add(bundle);
 
             var response = Optimizer.BuildBundle(bundle.Path, settings);
+
+            foreach (var path in paths) {
+                unitOfWork.RequestDelete(Path.Combine(parentPath, path));
+            }
 
             return new BundledSequence(sequence, response.Content);
         }
