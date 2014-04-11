@@ -22,14 +22,14 @@ namespace Chew {
         private static void MainWithoutErrorHandling(string[] args) {
             var console = FluentConsole.Instance;
 
-            var workingDirectory = args[0];
+            var workingDirectory = Path.GetFullPath(args[0]);
             var processors = new[] {
                 new ReferenceProcessor(new JavaScriptReferenceHandler()),
                 new ReferenceProcessor(new CssReferenceHandler())
             };
             var unitOfWork = new FileUnitOfWork(workingDirectory, new MD5FileNameGenerator());
 
-            console.White.Line("Preparing work:");
+            console.White.Line("Prechewing:");
             var filePaths = Directory.EnumerateFiles(workingDirectory, "*.html", SearchOption.AllDirectories);
             var allDocuments = new List<Tuple<HtmlDocument, string>>();
             foreach (var filePath in filePaths) {
@@ -44,7 +44,7 @@ namespace Chew {
                 allDocuments.Add(Tuple.Create(document, filePath));
             }
 
-            console.NewLine().White.Line("Committing work:");
+            console.NewLine().White.Line("Chewing:");
             unitOfWork.Commit(
                 beforeWrite:  path => console.Green.Line(" + " + path),
                 beforeDelete: path => console.Red.Line(" x " + path)

@@ -48,9 +48,6 @@
     <Reference Include="BundleTransformer.UglifyJs">
       <HintPath>..\#packages\BundleTransformer.UglifyJs.1.8.29\lib\net40\BundleTransformer.UglifyJs.dll</HintPath>
     </Reference>
-    <Reference Include="CommandLine">
-      <HintPath>..\#packages\CommandLineParser.1.9.71\lib\net45\CommandLine.dll</HintPath>
-    </Reference>
     <Reference Include="FluentConsole">
       <HintPath>..\#packages\FluentConsole.0.8.3.0\lib\net35-Client\FluentConsole.dll</HintPath>
     </Reference>
